@@ -1,0 +1,5 @@
+[target_hosts]
+target_host1 ansible_host=target_host1 ansible_user=root ansible_port=22 ansible_connection=ssh ansible_python_interpreter=/usr/bin/python3
+target_host2 ansible_host=target_host2 ansible_user=root ansible_port=22 ansible_connection=ssh ansible_python_interpreter=/usr/bin/python3
+target_host3 ansible_host=target_host3 ansible_user=root ansible_port=22 ansible_connection=ssh ansible_python_interpreter=/usr/bin/python3
+target_host4 ansible_host=target_host4 ansible_user=root ansible_port=22 ansible_connection=ssh ansible_python_interpreter=/usr/bin/python3

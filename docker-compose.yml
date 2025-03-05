@@ -1,0 +1,129 @@
+---
+networks:
+  app_network:
+    driver: bridge
+
+services:
+  ansible_host:
+    image: williamyeh/ansible:alpine3
+    container_name: ansible_host
+    privileged: true
+    networks:
+      - app_network
+    volumes:
+      - ./roles:/root/roles
+      - ./test.yml:/root/test.yml
+      - ./hosts:/root/hosts
+      - ssh_keys:/root/.ssh
+    tty: true
+    stdin_open: true
+    command: |
+      /bin/sh -c "
+      mkdir -p /root/.ssh && \
+      apk add vim && \
+      ssh-keygen -t rsa -b 2048 -f /root/.ssh/id_rsa -q -N '' && \
+      chmod 600 /root/.ssh/id_rsa && \
+      chmod 644 /root/.ssh/id_rsa.pub && \
+      /bin/sh
+      "
+    depends_on:
+      - target_host1
+      - target_host2
+      - target_host3
+    environment:
+      - ANSIBLE_HOST_KEY_CHECKING=False
+
+  target_host1:
+    image: registry.access.redhat.com/ubi8/ubi:latest
+    container_name: target_host1
+    privileged: true
+    networks:
+      - app_network
+    tty: true
+    stdin_open: true
+    volumes:
+      - ssh_keys:/root/.ssh
+    command: |
+      /bin/bash -c "
+      yum install -y openssh-server python3 cronie && \
+      mkdir -p /var/run/sshd /root/.ssh && \
+      ssh-keygen -A && \
+      echo 'root:password' | chpasswd && \
+      chmod 700 /root/.ssh && \
+      cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
+      chmod 600 /root/.ssh/authorized_keys && \
+      crond && \
+      exec /usr/sbin/sshd -D
+      "
+
+  target_host2:
+    image: registry.access.redhat.com/ubi8/ubi:latest
+    container_name: target_host2
+    privileged: true
+    networks:
+      - app_network
+    tty: true
+    stdin_open: true
+    volumes:
+      - ssh_keys:/root/.ssh
+    command: |
+      /bin/bash -c "
+      yum install -y openssh-server python3 cronie && \
+      mkdir -p /var/run/sshd /root/.ssh && \
+      ssh-keygen -A && \
+      echo 'root:password' | chpasswd && \
+      chmod 700 /root/.ssh && \
+      cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
+      chmod 600 /root/.ssh/authorized_keys && \
+      crond && \
+      exec /usr/sbin/sshd -D
+      "
+
+  target_host3:
+    image: registry.access.redhat.com/ubi8/ubi:latest
+    container_name: target_host3
+    privileged: true
+    networks:
+      - app_network
+    tty: true
+    stdin_open: true
+    volumes:
+      - ssh_keys:/root/.ssh
+    command: |
+      /bin/bash -c "
+      yum install -y openssh-server python3 cronie && \
+      mkdir -p /var/run/sshd /root/.ssh && \
+      ssh-keygen -A && \
+      echo 'root:password' | chpasswd && \
+      chmod 700 /root/.ssh && \
+      cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
+      chmod 600 /root/.ssh/authorized_keys && \
+      crond && \
+      exec /usr/sbin/sshd -D
+      "
+
+  target_host4:
+    image: registry.access.redhat.com/ubi8/ubi:latest
+    container_name: target_host4
+    privileged: true
+    networks:
+      - app_network
+    tty: true
+    stdin_open: true
+    volumes:
+      - ssh_keys:/root/.ssh
+    command: |
+      /bin/bash -c "
+      yum install -y openssh-server python3 cronie && \
+      mkdir -p /var/run/sshd /root/.ssh && \
+      ssh-keygen -A && \
+      echo 'root:password' | chpasswd && \
+      chmod 700 /root/.ssh && \
+      cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
+      chmod 600 /root/.ssh/authorized_keys && \
+      crond && \
+      exec /usr/sbin/sshd -D
+      "
+
+volumes:
+  ssh_keys:

@@ -1,0 +1,14 @@
+---
+- name: Create a test file
+  copy:
+    dest: /tmp/testfile.txt
+    content: "This is an Ansible test."
+    mode: '0644'
+
+- name: Check the file content
+  command: cat /tmp/testfile.txt
+  register: file_content
+
+- name: Display the file content
+  debug:
+    msg: "The file content is: {{ file_content.stdout }}"
