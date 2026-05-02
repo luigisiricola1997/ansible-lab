@@ -9,4 +9,5 @@ COPY shared/lab-init.sh /usr/local/bin/lab-init.sh
 COPY shared/lab-init.service /etc/systemd/system/lab-init.service
 
 RUN chmod +x /usr/local/bin/lab-init.sh && \
-    systemctl enable sshd lab-init
+    systemctl unmask systemd-logind && \
+    systemctl enable sshd lab-init systemd-logind
