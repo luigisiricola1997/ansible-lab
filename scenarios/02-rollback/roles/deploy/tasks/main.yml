@@ -1,0 +1,56 @@
+---
+- name: Ensure app directory exists
+  ansible.builtin.file:
+    path: /opt/app
+    state: directory
+    mode: '0755'
+
+- name: Check current config
+  ansible.builtin.stat:
+    path: /opt/app/config.txt
+  register: deploy_current_config
+
+- name: Backup current config if present
+  ansible.builtin.copy:
+    src: /opt/app/config.txt
+    dest: /opt/app/config.txt.bak
+    remote_src: true
+    mode: '0644'
+  when: deploy_current_config.stat.exists
+
+- name: Deploy new config (with rollback on failure)
+  block:
+    - name: Write new config
+      ansible.builtin.copy:
+        content: "version=2.0\n"
+        dest: /opt/app/config.txt
+        mode: '0644'
+
+    - name: Validate new config
+      ansible.builtin.fail:
+        msg: "Validation failed (simulated on {{ inventory_hostname }})"
+      when: simulate_failure | default(false) | bool
+
+  rescue:
+    - name: Check backup
+      ansible.builtin.stat:
+        path: /opt/app/config.txt.bak
+      register: deploy_backup_check
+
+    - name: Restore previous config
+      ansible.builtin.copy:
+        src: /opt/app/config.txt.bak
+        dest: /opt/app/config.txt
+        remote_src: true
+        mode: '0644'
+      when: deploy_backup_check.stat.exists
+
+    - name: Remove new config (no backup to restore)
+      ansible.builtin.file:
+        path: /opt/app/config.txt
+        state: absent
+      when: not deploy_backup_check.stat.exists
+
+    - name: Notify rollback
+      ansible.builtin.debug:
+        msg: "Rollback applied on {{ inventory_hostname }}"

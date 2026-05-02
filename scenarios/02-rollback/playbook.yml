@@ -1,0 +1,7 @@
+---
+- name: Deploy with automatic rollback on failure
+  hosts: target_hosts
+  become: true
+  serial: 2
+  roles:
+    - deploy

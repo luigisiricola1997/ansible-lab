@@ -1,6 +1,4 @@
 ---
-version: '3.8'
-
 networks:
   app_network:
     driver: bridge
@@ -9,70 +7,78 @@ volumes:
   ssh_keys:
 
 x-target-host-common: &target_host_common
-  image: registry.access.redhat.com/ubi8/ubi:latest
   privileged: true
+  cgroup: host
+  tmpfs:
+    - /run
+    - /tmp
   networks:
     - app_network
-  tty: true
-  stdin_open: true
   volumes:
     - ssh_keys:/root/.ssh
-  command: >
-    /bin/bash -c "
-    yum install -y openssh-server python3 cronie && \
-    mkdir -p /var/run/sshd /root/.ssh && \
-    ssh-keygen -A && \
-    echo 'root:password' | chpasswd && \
-    chmod 700 /root/.ssh && \
-    cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
-    chmod 600 /root/.ssh/authorized_keys && \
-    crond && \
-    exec /usr/sbin/sshd -D
-    "
+  depends_on:
+    ansible_host:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD-SHELL", "nc -z localhost 22 && [ -f /root/.ssh/authorized_keys ]"]
+    interval: 2s
+    timeout: 2s
+    retries: 60
+    start_period: 5s
+
+x-target-host-redhat: &target_host_redhat
+  <<: *target_host_common
+  build:
+    context: ./docker
+    dockerfile: target-host-redhat/Dockerfile
+
+x-target-host-ubuntu: &target_host_ubuntu
+  <<: *target_host_common
+  build:
+    context: ./docker
+    dockerfile: target-host-ubuntu/Dockerfile
 
 services:
   ansible_host:
-    image: williamyeh/ansible:alpine3
+    build: ./docker/ansible-controller
     container_name: ansible_host
-    privileged: true
     networks:
       - app_network
     volumes:
-      - ./roles:/root/roles
-      - ./test.yml:/root/test.yml
-      - ./hosts:/root/hosts
+      - ./inventory:/workspace/inventory
+      - ./scenarios:/workspace/scenarios
       - ssh_keys:/root/.ssh
-    tty: true
-    stdin_open: true
-    command: >
-      /bin/sh -c "
-      mkdir -p /root/.ssh && \
-      apk add vim && \
-      ssh-keygen -t rsa -b 2048 -f /root/.ssh/id_rsa -q -N '' && \
-      chmod 600 /root/.ssh/id_rsa && \
-      chmod 644 /root/.ssh/id_rsa.pub && \
-      /bin/sh
-      "
-    depends_on:
-      - target_host1
-      - target_host2
-      - target_host3
-      - target_host4
+      - ./docker/ansible-controller/entrypoint.sh:/entrypoint.sh:ro
+    command: sh /entrypoint.sh
     environment:
       - ANSIBLE_HOST_KEY_CHECKING=False
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /root/.ssh/id_rsa.pub ]"]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+      start_period: 1s
 
   target_host1:
-    <<: *target_host_common
+    <<: *target_host_redhat
     container_name: target_host1
 
   target_host2:
-    <<: *target_host_common
+    <<: *target_host_redhat
     container_name: target_host2
 
   target_host3:
-    <<: *target_host_common
+    <<: *target_host_redhat
     container_name: target_host3
 
   target_host4:
-    <<: *target_host_common
+    <<: *target_host_redhat
     container_name: target_host4
+
+  target_host5:
+    <<: *target_host_ubuntu
+    container_name: target_host5
+
+  target_host6:
+    <<: *target_host_ubuntu
+    container_name: target_host6

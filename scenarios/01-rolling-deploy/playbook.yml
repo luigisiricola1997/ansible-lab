@@ -1,0 +1,8 @@
+---
+- name: Rolling deploy of nginx with health gate
+  hosts: target_hosts
+  become: true
+  serial: 2
+  max_fail_percentage: 0
+  roles:
+    - nginx

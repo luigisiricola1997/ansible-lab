@@ -1,0 +1,11 @@
+[Unit]
+Description=Lab init - copy ansible_host public key to authorized_keys
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/lab-init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
