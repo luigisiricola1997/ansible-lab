@@ -13,7 +13,8 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     ssh-keygen -A && \
-    echo 'root:password' | chpasswd
+    echo 'root:password' | chpasswd && \
+    sed -i '1i UsePAM no' /etc/ssh/sshd_config
 
 COPY shared/lab-init.sh /usr/local/bin/lab-init.sh
 COPY shared/lab-init.service /etc/systemd/system/lab-init.service
