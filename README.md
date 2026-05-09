@@ -2,61 +2,48 @@
 
 ![CI](https://github.com/luigisiricola1997/ansible-lab/actions/workflows/test.yml/badge.svg)
 
-Test rolling, parallel, and serial deployment patterns for Ansible locally,
-across RHEL and Ubuntu. No VMs, no cloud, no waiting. 30 seconds to a
-6-host hybrid lab.
-
-## Who is this for
-
-You write Ansible roles and want to test multi-host patterns
-(`serial`, handlers, `block`/`rescue`, health gates) and cross-distro
-behavior (RHEL UBI9 + Ubuntu 24.04) without spinning up VMs or cloud
-instances.
-Everything runs on your laptop in containers.
+Multi-host Ansible deployment patterns (rolling, rollback, cross-distro) plus Terraform-to-Ansible handoff against an emulated AWS, all in containers - no VMs, no cloud account.
 
 ## Quickstart
 
 ```sh
-make up        # build and start the lab
-make test      # run all scenarios
-make down      # stop and clean up
+make up                  # 6 targets + controller + LocalStack
+make test                # all scenarios
+make down                # stop, clean volumes and tfstate
 ```
 
-Run a single scenario: `make play SCENARIO=02-rollback`. See `make help` for all targets.
+Subsets: `make test-ansible`, `make test-cloud`, `make molecule`.
+Single scenario: `make play scenario=02-rollback`.
 
-## Hosts
+## Layout
 
-- 4 RHEL UBI9 targets (`target_host1` to `target_host4`)
-- 2 Ubuntu 24.04 LTS targets (`target_host5`, `target_host6`)
-- 1 Ansible controller (`ansible_host`)
+Containers: 4 RHEL UBI9 + 2 Ubuntu 24.04 targets, 1 Ansible controller, 1 LocalStack (S3 + SecretsManager on `:4566`).
+Code: `roles/{nginx,deploy}`, `playbooks/`, `terraform/` (root + local module `modules/deployment_target`), `inventory/`, `ansible.cfg`.
 
-The `nginx` role is **single-source**: it uses `ansible.builtin.package` plus OS-specific vars loaded via `include_vars` keyed on `ansible_facts['os_family'`, so the same playbook installs and configures nginx on both distros without any duplication.
+## Scenarios
 
-## Scenarios included
+- **`01-rolling-deploy`**: nginx across 6 hosts in batches of 2 (`serial: 2`), templated index, handlers, health gate, cross-distro via `include_vars` on `os_family`.
+- **`02-rollback`**: same rollout with `block`/`rescue` restoring the previous config on failure; `target_host3` carries `simulate_failure=true` so the rescue path runs every CI build.
+- **`03-cloud-integration`**: Terraform provisions S3 + SecretsManager in LocalStack; Ansible reads the secret via `amazon.aws.aws_secret` and pushes an HTML artifact to S3 via `amazon.aws.s3_object`.
 
-- **`01-rolling-deploy`**: nginx deployed across all 6 target hosts in batches of 2 (`serial: 2`), with a templated index page, a `Reload nginx` handler, and a `wait_for` health gate after each batch. The canonical rolling-deploy pattern, exercised cross-distro.
+After scenario 03 the artifact is at `http://localhost:4566/ansible-lab-artifacts/index.html`.
 
-- **`02-rollback`**: same `serial: 2` rollout, but with `block`/`rescue` that restores the previous config when validation fails.
-  One target (`target_host3`) has `simulate_failure=true` set in the inventory, so the rollback path is exercised in CI on every commit.
+## Testing
+
+- **Unit (Molecule)**: each role tested in isolation across RHEL-family + Ubuntu, with converge / idempotence / state assertions.
+- **Integration (`make test-ansible`, `test-cloud`)**: scenarios on the multi-host lab; covers what spans hosts or tools.
 
 ## FAQ
 
 **Why Docker Compose and not Kubernetes?**
-Ansible's pet-host model (SSH onto persistent hosts, imperative state) is the opposite of Kubernetes' immutable-pod model. Running sshd plus a service inside a privileged pod is fighting the platform. Docker Compose is the right tool for a host-level lab. Use the right tool for the problem.
+Ansible's pet-host SSH model is the opposite of K8s' immutable-pod model.
 
-**Why `privileged: true` on the targets?**
-Required to run systemd as PID 1 inside the container, plus install packages with `dnf` (RHEL) or `apt` (Ubuntu). This is a lab, not a production runtime.
+**Why `privileged: true` on targets?**
+Needed for systemd as PID 1 plus `dnf`/`apt`.
 
-**Why UBI9 and Ubuntu together?**
-Real fleets are rarely homogeneous. Having both lets you verify that a role is actually cross-distro (the `package`/`service` modules plus `include_vars` pattern), not just RHEL-only with a green CI.
-
-**How do I add more target hosts?**
-Add another `target_hostN:` service in `docker-compose.yml` re-using either the `x-target-host-redhat` or `x-target-host-ubuntu` anchor, then append the hostname to the matching group in `inventory/hosts.ini`.
-
-**Where are SSH keys stored?**
-A shared Docker volume `ssh_keys` is mounted as `/root/.ssh` on every container.
-The `ansible_host` generates a keypair at startup; each target picks up the public key and writes it to `authorized_keys`.
+**Why LocalStack and not real AWS?**
+Zero cost, fully offline; Terraform's AWS provider and the `amazon.aws` collection both honor `AWS_ENDPOINT_URL`, so the code is identical to real AWS.
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE).
+GPL-3.0.

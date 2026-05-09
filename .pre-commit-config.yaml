@@ -1,6 +1,13 @@
 ---
 repos:
-  - repo: https://github.com/ansible/ansible-lint
-    rev: v25.1.3
+  - repo: local
     hooks:
       - id: ansible-lint
+        name: ansible-lint
+        language: python
+        additional_dependencies:
+          - ansible-lint==25.1.3
+          - ansible-core
+        entry: sh -c 'ansible-galaxy collection install -r requirements.yml >/dev/null && ansible-lint --force-color'
+        pass_filenames: false
+        always_run: true

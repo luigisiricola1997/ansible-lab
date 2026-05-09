@@ -1,0 +1,21 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Probe nginx on localhost:80
+      ansible.builtin.uri:
+        url: http://127.0.0.1
+        status_code: 200
+        return_content: true
+      register: nginx_probe
+      retries: 5
+      delay: 2
+      until: nginx_probe.status == 200
+
+    - name: Confirm rendered index page is the templated one
+      ansible.builtin.assert:
+        that:
+          - "'Hello from' in nginx_probe.content"
+        fail_msg: "Probed page content is unexpected: {{ nginx_probe.content[:200] }}"

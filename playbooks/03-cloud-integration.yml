@@ -1,0 +1,34 @@
+---
+- name: Cloud integration -- consume Terraform-managed AWS resources
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    bucket: ansible-lab-artifacts
+    secret_name: ansible-lab/welcome-message
+  tasks:
+    - name: Read welcome message from SecretsManager (provisioned by Terraform)
+      ansible.builtin.set_fact:
+        welcome_message: "{{ lookup('amazon.aws.aws_secret', secret_name) }}"
+
+    - name: Upload rendered index.html as deployment artifact to S3
+      amazon.aws.s3_object:
+        bucket: "{{ bucket }}"
+        object: index.html
+        content: "<html><body><h1>{{ welcome_message }}</h1></body></html>"
+        mode: put
+
+    - name: List bucket contents to confirm artifact upload
+      amazon.aws.s3_object_info:
+        bucket_name: "{{ bucket }}"
+      register: bucket_contents
+
+    - name: Show uploaded artifacts
+      ansible.builtin.debug:
+        msg: "Bucket {{ bucket }} contains: {{ bucket_contents.s3_keys }}"
+
+    - name: Fail if artifact is missing
+      ansible.builtin.assert:
+        that:
+          - "'index.html' in bucket_contents.s3_keys"
+        fail_msg: "index.html was not found in bucket {{ bucket }}"
