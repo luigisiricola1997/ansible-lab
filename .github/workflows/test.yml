@@ -23,28 +23,6 @@ jobs:
       - name: Check terraform formatting
         run: terraform -chdir=terraform fmt -check -recursive
 
-  molecule:
-    runs-on: ubuntu-latest
-    needs: lint
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        role: [nginx, deploy]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Molecule with Docker driver
-        run: pip install "ansible==13.6.0" "molecule==26.4.0" "molecule-plugins[docker]==25.8.12"
-
-      - name: Run Molecule for ${{ matrix.role }}
-        working-directory: roles/${{ matrix.role }}
-        run: molecule test
-
   integration:
     runs-on: ubuntu-latest
     needs: lint

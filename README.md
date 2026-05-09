@@ -12,7 +12,7 @@ make test                # all scenarios
 make down                # stop, clean volumes and tfstate
 ```
 
-Subsets: `make test-ansible`, `make test-cloud`, `make molecule`.
+Subsets: `make test-ansible`, `make test-cloud`.
 Single scenario: `make play scenario=02-rollback`.
 
 ## Layout
@@ -30,8 +30,8 @@ After scenario 03 the artifact is at `http://localhost:4566/ansible-lab-artifact
 
 ## Testing
 
-- **Unit (Molecule)**: each role tested in isolation across RHEL-family + Ubuntu, with converge / idempotence / state assertions.
-- **Integration (`make test-ansible`, `test-cloud`)**: scenarios on the multi-host lab; covers what spans hosts or tools.
+Integration tests on the multi-host lab via `make test-ansible` (scenarios 01-02 across the 6-host fleet) and `make test-cloud` (Terraform provision + scenario 03 + destroy).
+Both run in CI in parallel after lint.
 
 ## FAQ
 

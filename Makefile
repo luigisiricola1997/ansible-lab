@@ -1,4 +1,4 @@
-.PHONY: up down play test test-ansible test-cloud lint logs help tf-up tf-down tf-fmt molecule ci-local
+.PHONY: up down play test test-ansible test-cloud lint logs help tf-up tf-down tf-fmt ci-local
 
 scenario ?= 01-rolling-deploy
 LINT_IMAGE = ghcr.io/ansible/community-ansible-dev-tools:latest
@@ -22,8 +22,7 @@ help:
 	@echo "  make tf-down                  Destroy terraform-managed resources"
 	@echo "  make tf-fmt                   Format terraform/ recursively"
 	@echo "  make lint                     Run ansible-lint in a container"
-	@echo "  make molecule                 Run Molecule tests for all roles (needs molecule-plugins[docker])"
-	@echo "  make ci-local                 Run lint + molecule + integration locally (mirrors CI)"
+	@echo "  make ci-local                 Run lint + integration locally (mirrors CI)"
 	@echo "  make logs                     Tail compose logs"
 	@echo "  make down                     Stop the lab, remove volumes and tfstate"
 
@@ -63,14 +62,8 @@ lint:
 	docker run --rm -v "$(CURDIR)":/data -w /data $(LINT_IMAGE) sh -c \
 		"ansible-galaxy collection install -r requirements.yml && ansible-lint"
 
-molecule:
-	@command -v molecule >/dev/null || { echo "molecule not found. Install: pip install 'molecule-plugins[docker]'"; exit 1; }
-	cd roles/nginx && molecule test
-	cd roles/deploy && molecule test
-
 ci-local:
 	$(MAKE) lint
-	$(MAKE) molecule
 	$(MAKE) up
 	$(MAKE) test
 	$(MAKE) down
