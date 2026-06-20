@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ansible/ansible-lint@v25.1.3
         with:
@@ -32,7 +32,7 @@ jobs:
       matrix:
         target: [test-ansible, test-cloud]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Start lab
         run: make up
